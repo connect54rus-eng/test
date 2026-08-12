@@ -154,7 +154,7 @@ var SHAKE_THRESHOLD = 7;      // Чувствительность (меньше 
 var SHAKE_FORCE = 6;           // Сила толчка монет
 var SHAKE_COOLDOWN = 1000;     // Задержка между встряхиваниями (мс) — 1 секунда
 var TILT_SENSITIVITY = 0.03;   // Чувствительность к наклонам
-var UPSIDE_DOWN_THRESHOLD = -4; // Порог акселерометра для определения переворота (> 90°)
+var UPSIDE_DOWN_THRESHOLD = -99; // Порог акселерометра для определения переворота (> 90°)
 var MAX_FILL_LEVEL = 0.85;     // Максимальное заполнение для работы гироскопа (85%)
 // =================================
 
@@ -655,7 +655,7 @@ function fixDrift(){
 /* ====== GAME LOGIC ====== */
 function rci(){
   if(firstDrop) return 1;
-  var wt=[0,20,20,20,20,20];
+  var wt=[0,30,25,20,15,10];
   var totalW=0;
   for(var id=1;id<=5;id++){
     if(id<=2 || unlocked[id]) totalW+=wt[id];
