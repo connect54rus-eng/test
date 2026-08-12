@@ -428,7 +428,7 @@ function genTop(){
 
 /* ====== PHYSICS SETUP ====== */
 function init(){
-  eng=Matter.Engine.create({gravity:{x:0,y:0.8,scale:0.001}});
+  eng=Matter.Engine.create({gravity:{x:0,y:1,scale:0.001}});
   eng.positionIterations=20;
   eng.velocityIterations=20;
   coins=[];me=[];sp=[];pm=[];sc=0;go=false;cd=true;dt=0;cb2=0;lmt=0;lt2=0;ac=0;floorTouch={};unlocked={};firstDrop=true;
@@ -443,7 +443,7 @@ function init(){
 function mkW(){
   var t=40;
   var wo={isStatic:true,friction:0,restitution:0.08,label:'wall'};
-  var fo={isStatic:true,friction:0,restitution:0.55,label:'floor'};
+  var fo={isStatic:true,friction:0,restitution:0.25,label:'floor'};
   Matter.Composite.add(eng.world,
     Matter.Bodies.rectangle(-t/2, GH/2, t, GH*2, wo));
   Matter.Composite.add(eng.world,
