@@ -150,9 +150,9 @@ var DY=Math.round(40*(GW/350));
 var DC=500,GOG=120;
 
 // ===== ПАРАМЕТРЫ ГИРОСКОПА =====
-var SHAKE_THRESHOLD = 2;      // Чувствительность (меньше = легче встряхнуть)
-var SHAKE_FORCE = 10;           // Сила толчка монет
-var SHAKE_COOLDOWN = 1000;     // Задержка между встряхиваниями (мс) — 1 секунда
+var SHAKE_THRESHOLD = 3;      // Чувствительность (меньше = легче встряхнуть)
+var SHAKE_FORCE = 7;           // Сила толчка монет
+var SHAKE_COOLDOWN = 700;     // Задержка между встряхиваниями (мс) — 1 секунда
 var TILT_SENSITIVITY = 0.03;   // Чувствительность к наклонам
 var UPSIDE_DOWN_THRESHOLD = -99; // Порог акселерометра для определения переворота (> 90°)
 var MAX_FILL_LEVEL = 0.85;     // Максимальное заполнение для работы гироскопа (85%)
@@ -1119,7 +1119,7 @@ function handleMotion(event) {
   if (delta > SHAKE_THRESHOLD) {
     shakeCounter++;
     if (shakeCounter > 2) {
-      var force = Math.min(delta / SHAKE_THRESHOLD, 40);
+      var force = Math.min(delta / SHAKE_THRESHOLD, 30);
       shakeCoins(force * 9);
       shakeCounter = 0;
     }
