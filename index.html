@@ -155,7 +155,7 @@ var DC=500,GOG=120;
 var SHAKE_THRESHOLD = 3;       // Чувствительность (меньше = легче встряхнуть)
 var SHAKE_FORCE = 7;           // Сила толчка монет
 var SHAKE_COOLDOWN = 1000;     // Задержка между встряхиваниями (мс)
-var TILT_SENSITIVITY = 0.3;   // Чувствительность к наклонам
+var TILT_SENSITIVITY = 0.5;    // Чувствительность к наклонам (0.5 = быстрое перекатывание)
 var MAX_FILL_LEVEL = 0.85;     // Максимальное заполнение для работы гироскопа (85%)
 // =================================
 
@@ -666,7 +666,7 @@ function fixDrift(){
 /* ====== GAME LOGIC ====== */
 function rci(){
   if(firstDrop) return 1;
-  var wt=[0,20,20,20,20,20];  // Равные шансы (20% каждая)
+  var wt=[0,30,25,20,15,10];  // Равные шансы (20% каждая)
   var totalW=0;
   for(var id=1;id<=5;id++){
     if(id<=2 || unlocked[id]) totalW+=wt[id];
@@ -1037,11 +1037,7 @@ function applyTilt(accX, accY) {
   var forceX = accX * TILT_SENSITIVITY;
   var forceY = accY * TILT_SENSITIVITY;
   
-  forceX = Math.max(-0.3, Math.min(0.3, forceX));
-  forceY = Math.max(-0.3, Math.min(0.3, forceY));
-  
-  if (Math.abs(forceX) < 0.01 && Math.abs(forceY) < 0.01) return;
-  
+  // Убираем жесткое ограничение, добавляем хаотичность
   for (var i = 0; i < coins.length; i++) {
     var coin = coins[i];
     var body = coin.body;
@@ -1050,9 +1046,25 @@ function applyTilt(accX, accY) {
       body.isSleeping = false;
     }
     
+    // Каждая монета получает свою силу (в зависимости от размера)
+    var r = CN[coin.cid - 1].r;
+    var sizeFactor = 1 + (r / 80);
+    
+    // Случайное отклонение для каждой монеты (хаотичность)
+    var randomX = (Math.random() - 0.5) * 0.05;
+    var randomY = (Math.random() - 0.5) * 0.05;
+    
+    // Сила с учётом размера и случайности
+    var finalX = forceX * (0.7 + Math.random() * 0.6) / sizeFactor + randomX;
+    var finalY = forceY * (0.7 + Math.random() * 0.6) / sizeFactor + randomY;
+    
+    // Плавное ускорение (инерция)
+    var inertiaX = body.velocity.x * 0.02;
+    var inertiaY = body.velocity.y * 0.02;
+    
     Matter.Body.setVelocity(body, {
-      x: body.velocity.x + forceX * 0.3,
-      y: body.velocity.y + forceY * 0.3
+      x: body.velocity.x + finalX * 0.4 + inertiaX,
+      y: body.velocity.y + finalY * 0.4 + inertiaY
     });
   }
 }
