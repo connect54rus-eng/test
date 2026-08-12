@@ -436,11 +436,6 @@ function init(){
   mkW();
   mkPairOverrides();
   
-  // ===== СБРАСЫВАЕМ ГРАВИТАЦИЮ =====
-  eng.gravity.x = 0;
-  eng.gravity.y = 1.3;
-  // ================================
-  
   cur={id:1,x:GW/2};
   upU();
 }
@@ -1042,13 +1037,7 @@ function applyTilt(accX, accY) {
   var forceX = accX * TILT_SENSITIVITY;
   var forceY = accY * TILT_SENSITIVITY;
   
-  // Уменьшаем гравитацию при наклоне (чтобы монеты "всплывали")
-  if (eng) {
-    var tiltStrength = Math.sqrt(forceX*forceX + forceY*forceY);
-    var gravityReduce = 1 - Math.min(tiltStrength * 2, 0.8);
-    eng.gravity.y = 1.3 * gravityReduce;
-    eng.gravity.x = forceX * 0.15;
-  }
+  // ===== ГРАВИТАЦИЯ НЕ МЕНЯЕТСЯ — монеты не всплывают =====
   
   for (var i = 0; i < coins.length; i++) {
     var coin = coins[i];
@@ -1062,24 +1051,21 @@ function applyTilt(accX, accY) {
     var sizeFactor = 1 + (r / 80);
     
     // Случайное отклонение для каждой монеты (хаотичность)
-    var randomX = (Math.random() - 0.5) * 0.08;
-    var randomY = (Math.random() - 0.5) * 0.08;
+    var randomX = (Math.random() - 0.5) * 0.05;
+    var randomY = (Math.random() - 0.5) * 0.05;
     
-    // Сила с учётом размера и случайности
+    // Сила с учётом размера и случайности (только горизонтальная)
     var finalX = forceX * (0.5 + Math.random() * 0.8) / sizeFactor + randomX;
-    var finalY = forceY * (0.5 + Math.random() * 0.8) / sizeFactor + randomY;
-    
-    // Добавляем вертикальный импульс (чтобы монеты подпрыгивали)
-    var verticalBoost = Math.abs(forceY) * 0.3 + Math.abs(forceX) * 0.1;
-    finalY -= verticalBoost * (0.5 + Math.random() * 0.5);
+    // Вертикальная сила — только от наклона, без подъёма
+    var finalY = forceY * (0.3 + Math.random() * 0.5) / sizeFactor + randomY * 0.5;
     
     // Инерция
     var inertiaX = body.velocity.x * 0.03;
     var inertiaY = body.velocity.y * 0.03;
     
     Matter.Body.setVelocity(body, {
-      x: body.velocity.x + finalX * 0.5 + inertiaX,
-      y: body.velocity.y + finalY * 0.5 + inertiaY - 0.2
+      x: body.velocity.x + finalX * 0.4 + inertiaX,
+      y: body.velocity.y + finalY * 0.2 + inertiaY
     });
   }
 }
