@@ -2,12 +2,15 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="screen-orientation" content="portrait">
+<meta name="x5-orientation" content="portrait">
+<meta name="mobile-web-app-capable" content="yes">
 <title>Coin Merge</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#fef3c7,#fde68a 50%,#fcd34d);font-family:system-ui,-apple-system,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#fef3c7,#fde68a 50%,#fcd34d);font-family:system-ui,-apple-system,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;orientation:portrait;-webkit-orientation:portrait}
 .wrap{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;max-width:320px}
 .sp{display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 4px;gap:8px}
 .sb{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid rgba(217,119,6,.15);border-radius:12px;padding:8px 12px;flex:1;box-shadow:0 1px 4px rgba(0,0,0,.06)}
@@ -87,8 +90,7 @@ body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align
       <button class="mbtn mbtn-s mbtn-sm" id="btnMenuGO">📋 В меню</button>
     </div>
   </div>
-  
-  <div class="gyro-indicator hid" id="gyroIndicator" style="text-align:center;padding:4px 0;font-size:10px;font-weight:600;color:#78716c;height:18px;"></div>  
+  <div class="gyro-indicator hid" id="gyroIndicator" style="text-align:center;padding:4px 0;font-size:10px;font-weight:600;color:#78716c;height:18px;"></div>
   <div class="ch hid" id="gameHint">
     <p id="ht">Тапни чтобы бросить монету</p>
     <p class="s2">Две одинаковые монеты сливаются в одну побольше</p>
@@ -150,11 +152,10 @@ var DY=Math.round(40*(GW/350));
 var DC=500,GOG=120;
 
 // ===== ПАРАМЕТРЫ ГИРОСКОПА =====
-var SHAKE_THRESHOLD = 3;      // Чувствительность (меньше = легче встряхнуть)
+var SHAKE_THRESHOLD = 3;       // Чувствительность (меньше = легче встряхнуть)
 var SHAKE_FORCE = 7;           // Сила толчка монет
-var SHAKE_COOLDOWN = 700;     // Задержка между встряхиваниями (мс) — 1 секунда
+var SHAKE_COOLDOWN = 1000;     // Задержка между встряхиваниями (мс)
 var TILT_SENSITIVITY = 0.03;   // Чувствительность к наклонам
-var UPSIDE_DOWN_THRESHOLD = -99; // Порог акселерометра для определения переворота (> 90°)
 var MAX_FILL_LEVEL = 0.85;     // Максимальное заполнение для работы гироскопа (85%)
 // =================================
 
@@ -218,7 +219,6 @@ if (tg) {
   isMobile = platform === 'ios' || platform === 'android' || platform === 'android_x' || platform === 'ios';
   isDesktop = platform === 'web' || platform === 'webk' || platform === 'weba' || platform === 'tdesktop' || platform === 'macos' || platform === 'windows';
 } else {
-  // Если не в Telegram — проверяем по ширине экрана
   isMobile = window.innerWidth < 600;
   isDesktop = !isMobile;
 }
@@ -230,6 +230,28 @@ if (isDesktop) {
   btnShakeE.classList.add('hid');
 }
 // ==================================
+
+// ===== БЛОКИРОВКА ПОРТРЕТНОЙ ОРИЕНТАЦИИ =====
+function forcePortrait() {
+  var angle = window.orientation || 0;
+  if (Math.abs(angle) === 90) {
+    if (typeof screen !== 'undefined' && screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('portrait').catch(function() {});
+    }
+    if (window.Telegram && Telegram.WebApp) {
+      try { Telegram.WebApp.setOrientation('portrait'); } catch(e) {}
+    }
+  }
+}
+forcePortrait();
+window.addEventListener('orientationchange', function() {
+  setTimeout(forcePortrait, 100);
+});
+window.addEventListener('resize', function() {
+  forcePortrait();
+});
+setInterval(forcePortrait, 500);
+// =============================================
 
 /* ====== MUSIC ====== */
 var bgMusic=new Audio('music.mp3');
@@ -307,7 +329,6 @@ var firstDrop=true;
 bs=parseInt(localStorage.getItem('suika-best')||'0');bsE.textContent=bs;
 
 // ===== ПЕРЕМЕННЫЕ ДЛЯ ГИРОСКОПА =====
-var isPhoneUpsideDown = false;
 var topWall = null;
 var shakeCounter = 0;
 var shakeX = 0, shakeY = 0, shakeZ = 0;
@@ -342,27 +363,18 @@ function showMenu(){
   top50E.classList.add('hid');
   gameUIE.classList.add('hid');
   gameHintE.classList.add('hid');
-  
-  // ===== СКРЫВАЕМ ИНДИКАТОР ГИРОСКОПА =====
   var el = document.getElementById('gyroIndicator');
   if (el) el.classList.add('hid');
-  // ========================================
-  
   menuBsE.textContent=bs;
 }
-
 function showGame(){
   menuE.classList.add('hid');
   top50E.classList.add('hid');
   gameUIE.classList.remove('hid');
   gameHintE.classList.remove('hid');
-  
-  // ===== ПОКАЗЫВАЕМ ИНДИКАТОР ГИРОСКОПА =====
   var el = document.getElementById('gyroIndicator');
   if (el) el.classList.remove('hid');
-  // =========================================
 }
-
 function showTopAll(){
   topMode='all';
   menuE.classList.add('hid');
@@ -421,11 +433,15 @@ function init(){
   eng.positionIterations=20;
   eng.velocityIterations=20;
   coins=[];me=[];sp=[];pm=[];sc=0;go=false;cd=true;dt=0;cb2=0;lmt=0;lt2=0;ac=0;floorTouch={};unlocked={};firstDrop=true;
-  isPhoneUpsideDown = false;
   topWall = null;
 
   mkW();
   mkPairOverrides();
+  
+  // ===== СОЗДАЁМ БАРЬЕР (если гироскоп активен) =====
+  updateTopWall();
+  // ================================================
+  
   cur={id:1,x:GW/2};
   upU();
 }
@@ -443,61 +459,61 @@ function mkW(){
 }
 
 /* ================================================================
-   ТАБЛИЦА ОТСКОКОВ — BOUNCE TABLE (уменьшено в 3 раза)
+   ТАБЛИЦА ОТСКОКОВ — BOUNCE TABLE (уменьшено в 1.5 раза)
 ================================================================ */
 var BOUNCE = {};
 (function(){
   for(var i=1;i<=10;i++){ BOUNCE[i]={}; for(var j=1;j<=10;j++) BOUNCE[i][j]=0; }
 
-  // === МОНЕТА 1 (все значения /3) ===
-  BOUNCE[1][2]=0.333; BOUNCE[1][3]=0.7;   BOUNCE[1][4]=0.733; BOUNCE[1][5]=0.75;
-  BOUNCE[1][6]=0.767; BOUNCE[1][7]=0.783; BOUNCE[1][8]=0.8;   BOUNCE[1][9]=0.817;
-  BOUNCE[1][10]=0.833;
+  // === МОНЕТА 1 ===
+  BOUNCE[1][2]=0.667; BOUNCE[1][3]=1.4;   BOUNCE[1][4]=1.467; BOUNCE[1][5]=1.5;
+  BOUNCE[1][6]=1.533; BOUNCE[1][7]=1.567; BOUNCE[1][8]=1.6;   BOUNCE[1][9]=1.633;
+  BOUNCE[1][10]=1.667;
 
-  // === МОНЕТА 2 (все значения /3) ===
-  BOUNCE[2][1]=0.367; BOUNCE[2][3]=0.567; BOUNCE[2][4]=0.6;   BOUNCE[2][5]=0.617;
-  BOUNCE[2][6]=0.633; BOUNCE[2][7]=0.65;  BOUNCE[2][8]=0.667; BOUNCE[2][9]=0.683;
-  BOUNCE[2][10]=0.7;
+  // === МОНЕТА 2 ===
+  BOUNCE[2][1]=0.733; BOUNCE[2][3]=1.133; BOUNCE[2][4]=1.2;   BOUNCE[2][5]=1.233;
+  BOUNCE[2][6]=1.267; BOUNCE[2][7]=1.3;   BOUNCE[2][8]=1.333; BOUNCE[2][9]=1.367;
+  BOUNCE[2][10]=1.4;
 
-  // === МОНЕТА 3 (все значения /3) ===
-  BOUNCE[3][1]=0.433; BOUNCE[3][2]=0.467; BOUNCE[3][4]=0.533; BOUNCE[3][5]=0.567;
-  BOUNCE[3][6]=0.583; BOUNCE[3][7]=0.6;   BOUNCE[3][8]=0.617; BOUNCE[3][9]=0.633;
-  BOUNCE[3][10]=0.65;
+  // === МОНЕТА 3 ===
+  BOUNCE[3][1]=0.867; BOUNCE[3][2]=0.933; BOUNCE[3][4]=1.067; BOUNCE[3][5]=1.133;
+  BOUNCE[3][6]=1.167; BOUNCE[3][7]=1.2;   BOUNCE[3][8]=1.233; BOUNCE[3][9]=1.267;
+  BOUNCE[3][10]=1.3;
 
-  // === МОНЕТА 4 (все значения /3) ===
-  BOUNCE[4][1]=0.367; BOUNCE[4][2]=0.4;   BOUNCE[4][3]=0.433; BOUNCE[4][5]=0.5;
-  BOUNCE[4][6]=0.533; BOUNCE[4][7]=0.55;  BOUNCE[4][8]=0.567; BOUNCE[4][9]=0.583;
-  BOUNCE[4][10]=0.6;
+  // === МОНЕТА 4 ===
+  BOUNCE[4][1]=0.733; BOUNCE[4][2]=0.8;   BOUNCE[4][3]=0.867; BOUNCE[4][5]=1.0;
+  BOUNCE[4][6]=1.067; BOUNCE[4][7]=1.1;   BOUNCE[4][8]=1.133; BOUNCE[4][9]=1.167;
+  BOUNCE[4][10]=1.2;
 
-  // === МОНЕТА 5 (все значения /3) ===
-  BOUNCE[5][1]=0.333; BOUNCE[5][2]=0.367; BOUNCE[5][3]=0.4;   BOUNCE[5][4]=0.433;
-  BOUNCE[5][6]=0.467; BOUNCE[5][7]=0.5;   BOUNCE[5][8]=0.517; BOUNCE[5][9]=0.533;
-  BOUNCE[5][10]=0.55;
+  // === МОНЕТА 5 ===
+  BOUNCE[5][1]=0.667; BOUNCE[5][2]=0.733; BOUNCE[5][3]=0.8;   BOUNCE[5][4]=0.867;
+  BOUNCE[5][6]=0.933; BOUNCE[5][7]=1.0;   BOUNCE[5][8]=1.033; BOUNCE[5][9]=1.067;
+  BOUNCE[5][10]=1.1;
 
-  // === МОНЕТА 6 (все значения /3) ===
-  BOUNCE[6][1]=0.3;   BOUNCE[6][2]=0.333; BOUNCE[6][3]=0.367; BOUNCE[6][4]=0.4;
-  BOUNCE[6][5]=0.433; BOUNCE[6][7]=0.467; BOUNCE[6][8]=0.483; BOUNCE[6][9]=0.5;
-  BOUNCE[6][10]=0.517;
+  // === МОНЕТА 6 ===
+  BOUNCE[6][1]=0.6;   BOUNCE[6][2]=0.667; BOUNCE[6][3]=0.733; BOUNCE[6][4]=0.8;
+  BOUNCE[6][5]=0.867; BOUNCE[6][7]=0.933; BOUNCE[6][8]=0.967; BOUNCE[6][9]=1.0;
+  BOUNCE[6][10]=1.033;
 
-  // === МОНЕТА 7 (все значения /3) ===
-  BOUNCE[7][1]=0.267; BOUNCE[7][2]=0.3;   BOUNCE[7][3]=0.333; BOUNCE[7][4]=0.367;
-  BOUNCE[7][5]=0.4;   BOUNCE[7][6]=0.433; BOUNCE[7][8]=0.45;  BOUNCE[7][9]=0.467;
-  BOUNCE[7][10]=0.483;
+  // === МОНЕТА 7 ===
+  BOUNCE[7][1]=0.533; BOUNCE[7][2]=0.6;   BOUNCE[7][3]=0.667; BOUNCE[7][4]=0.733;
+  BOUNCE[7][5]=0.8;   BOUNCE[7][6]=0.867; BOUNCE[7][8]=0.9;   BOUNCE[7][9]=0.933;
+  BOUNCE[7][10]=0.967;
 
-  // === МОНЕТА 8 (все значения /3) ===
-  BOUNCE[8][1]=0.233; BOUNCE[8][2]=0.267; BOUNCE[8][3]=0.3;   BOUNCE[8][4]=0.333;
-  BOUNCE[8][5]=0.367; BOUNCE[8][6]=0.383; BOUNCE[8][7]=0.4;   BOUNCE[8][9]=0.433;
-  BOUNCE[8][10]=0.45;
+  // === МОНЕТА 8 ===
+  BOUNCE[8][1]=0.467; BOUNCE[8][2]=0.533; BOUNCE[8][3]=0.6;   BOUNCE[8][4]=0.667;
+  BOUNCE[8][5]=0.733; BOUNCE[8][6]=0.767; BOUNCE[8][7]=0.8;   BOUNCE[8][9]=0.867;
+  BOUNCE[8][10]=0.9;
 
-  // === МОНЕТА 9 (все значения /3) ===
-  BOUNCE[9][1]=0.2;   BOUNCE[9][2]=0.233; BOUNCE[9][3]=0.267; BOUNCE[9][4]=0.3;
-  BOUNCE[9][5]=0.333; BOUNCE[9][6]=0.35;  BOUNCE[9][7]=0.367; BOUNCE[9][8]=0.4;
-  BOUNCE[9][10]=0.417;
+  // === МОНЕТА 9 ===
+  BOUNCE[9][1]=0.4;   BOUNCE[9][2]=0.467; BOUNCE[9][3]=0.533; BOUNCE[9][4]=0.6;
+  BOUNCE[9][5]=0.667; BOUNCE[9][6]=0.7;   BOUNCE[9][7]=0.733; BOUNCE[9][8]=0.8;
+  BOUNCE[9][10]=0.833;
 
-  // === МОНЕТА 10 (все значения /3) ===
-  BOUNCE[10][1]=0.167; BOUNCE[10][2]=0.2;  BOUNCE[10][3]=0.233; BOUNCE[10][4]=0.267;
-  BOUNCE[10][5]=0.3;   BOUNCE[10][6]=0.317; BOUNCE[10][7]=0.333; BOUNCE[10][8]=0.367;
-  BOUNCE[10][9]=0.383;
+  // === МОНЕТА 10 ===
+  BOUNCE[10][1]=0.333; BOUNCE[10][2]=0.4;  BOUNCE[10][3]=0.467; BOUNCE[10][4]=0.533;
+  BOUNCE[10][5]=0.6;   BOUNCE[10][6]=0.633; BOUNCE[10][7]=0.667; BOUNCE[10][8]=0.733;
+  BOUNCE[10][9]=0.767;
 })();
 
 /* ================================================================
@@ -567,8 +583,9 @@ function applyPairOverrides(pairs){
       }
       var sameMerge=(ia>=0&&ib>=0&&coins[ia].cid===coins[ib].cid&&coins[ia].cid<=10);
 
-      pair.friction=sameMerge?0.28:0.30;
-      pair.frictionStatic=sameMerge?0.35:0.45;
+      pair.friction=sameMerge?0.1:0.15;
+      pair.frictionStatic=sameMerge?0.2:0.25;
+      pair.restitution=0.2;
 
     } else if(isA || isB){
       var coin=isA?a:b;
@@ -655,7 +672,7 @@ function fixDrift(){
 /* ====== GAME LOGIC ====== */
 function rci(){
   if(firstDrop) return 1;
-  var wt=[0,30,25,20,15,10];
+  var wt=[0,20,20,20,20,20];  // Равные шансы (20% каждая)
   var totalW=0;
   for(var id=1;id<=5;id++){
     if(id<=2 || unlocked[id]) totalW+=wt[id];
@@ -716,7 +733,7 @@ function pmrg(ca,cb3){
   }
   var cc=CN[nid-1];
   var nb=Matter.Bodies.circle(mx,my,cc.r,{
-    friction:0.42, restitution:0, frictionStatic:0.55, frictionAir:0.003,
+    friction:0.3, restitution:0.2, frictionStatic:0.4, frictionAir:0.003,
     density:0.002, label:'c'
   });
   Matter.Body.setVelocity(nb,{x:0,y:-1.5});
@@ -742,7 +759,7 @@ function drop(){
   if(!cur||!cd||go)return;
   var cc=CN[cur.id-1];
   var bd=Matter.Bodies.circle(cur.x,DY,cc.r,{
-    friction:0.42, restitution:0, frictionStatic:0.55, frictionAir:0.003,
+    friction:0.3, restitution:0.2, frictionStatic:0.4, frictionAir:0.003,
     density:0.002, label:'c'
   });
   Matter.Body.setVelocity(bd,{x:0,y:0});
@@ -756,12 +773,6 @@ function drop(){
 
 function chkGO(){
   var now=Date.now(),any=false;
-  
-  // Если защита включена — игра не может закончиться
-  if (isPhoneUpsideDown) {
-    dt = 0;
-    return;
-  }
   
   for(var i=0;i<coins.length;i++){
     var cn=coins[i];
@@ -783,7 +794,6 @@ function upE(){
   sp=sp.filter(function(p){p.y+=p.vy;p.al-=.012;return p.al>0;});
 }
 
-// ===== СЮДА ВСТАВИТЬ НОВУЮ ФУНКЦИЮ =====
 function updateGyroIndicator() {
   var el = document.getElementById('gyroIndicator');
   if (!el) return;
@@ -808,7 +818,6 @@ function updateGyroIndicator() {
     el.style.color = '#78716c';
   }
 }
-// ======================================
 
 /* ====== RENDERING ====== */
 function drBg(){
@@ -826,25 +835,10 @@ function drW(){
 function drDL(){
   cx.save();
   
-  if (isPhoneUpsideDown) {
-    // === ЗАЩИТА ВКЛЮЧЕНА: толстая сплошная линия ===
-    cx.strokeStyle = '#FF6B00';
-    cx.lineWidth = 4;
-    cx.setLineDash([]);
-    cx.shadowColor = 'rgba(255, 107, 0, 0.5)';
-    cx.shadowBlur = 10;
-    
-    cx.font = 'bold 11px system-ui,sans-serif';
-    cx.textAlign = 'center';
-    cx.fillStyle = '#FF6B00';
-    cx.fillText('🛡️ ЗАЩИТА ВКЛЮЧЕНА', GW/2, DLY - 12);
-    cx.shadowBlur = 0;
-  } else {
-    // === ОБЫЧНАЯ ЛИНИЯ: пунктирная ===
-    cx.strokeStyle = 'rgba(220,50,50,.6)';
-    cx.lineWidth = 1.8;
-    cx.setLineDash([8, 6]);
-  }
+  // Обычная линия — всегда пунктирная
+  cx.strokeStyle = 'rgba(220,50,50,.6)';
+  cx.lineWidth = 1.8;
+  cx.setLineDash([8, 6]);
   
   cx.beginPath();
   cx.moveTo(0, DLY);
@@ -913,9 +907,7 @@ function render(){
     cx.fillStyle='rgba(220,50,50,'+a+')';cx.fillRect(0,0,GW,DLY);
   }
   
-  // ===== ОБНОВЛЯЕМ ИНДИКАТОР ГИРОСКОПА =====
   updateGyroIndicator();
-  // ========================================
 }
 
 /* ====== GAME LOOP ====== */
@@ -935,6 +927,9 @@ function upd(){
   if(!cd&&Date.now()-lst>DC)cd=true;
   if(cd&&!cur&&!go){cur={id:rci(),x:GW/2};upU();}
   upE();
+  
+  // Обновляем барьер в зависимости от заполнения
+  updateTopWall();
 }
 
 function loop(ts){
@@ -953,9 +948,40 @@ function getFillLevel() {
     var r = CN[coin.cid - 1].r;
     totalArea += Math.PI * r * r;
   }
-  var maxArea = GW * GH * 0.8;
+  var maxArea = GW * GH * 0.85;
   var fillPercent = Math.min(totalArea / maxArea, 1);
   return fillPercent;
+}
+
+function createTopWall() {
+  if (topWall) return;
+  
+  topWall = Matter.Bodies.rectangle(GW/2, DLY - 2, GW + 20, 4, {
+    isStatic: true,
+    friction: 0.3,
+    restitution: 0.05,
+    label: 'topWall',
+    render: { visible: false }
+  });
+  Matter.Composite.add(eng.world, topWall);
+}
+
+function updateTopWall() {
+  var fillLevel = getFillLevel();
+  var gyroEnabled = fillLevel < MAX_FILL_LEVEL;
+  
+  if (gyroEnabled) {
+    // Гироскоп активен — включаем барьер
+    if (!topWall) {
+      createTopWall();
+    }
+  } else {
+    // Гироскоп отключён — убираем барьер
+    if (topWall) {
+      Matter.Composite.remove(eng.world, topWall);
+      topWall = null;
+    }
+  }
 }
 
 function shakeCoins(force) {
@@ -1030,25 +1056,6 @@ function applyTilt(accX, accY) {
   }
 }
 
-function activateTopWall() {
-  if (topWall) return;
-  
-  topWall = Matter.Bodies.rectangle(GW/2, DLY - 2, GW + 10, 4, {
-    isStatic: true,
-    friction: 0.3,
-    restitution: 0.05,
-    label: 'topWall',
-    render: { visible: false }
-  });
-  Matter.Composite.add(eng.world, topWall);
-}
-
-function deactivateTopWall() {
-  if (!topWall) return;
-  Matter.Composite.remove(eng.world, topWall);
-  topWall = null;
-}
-
 function initGyroscope() {
   if (typeof DeviceMotionEvent === 'undefined') {
     console.log('DeviceMotion не поддерживается');
@@ -1092,19 +1099,6 @@ function handleMotion(event) {
   var y = acc.y || 0;
   var z = acc.z || 0;
   
-  // === ПРОВЕРКА ЗАПОЛНЕНИЯ ===
-  var fillLevel = getFillLevel();
-  var gyroEnabled = fillLevel < MAX_FILL_LEVEL;
-  
-  if (!gyroEnabled) {
-    if (isPhoneUpsideDown) {
-      isPhoneUpsideDown = false;
-      deactivateTopWall();
-    }
-    return;
-  }
-  // ============================
-  
   // === ОБРАБОТКА ВСТРЯХИВАНИЯ ===
   var deltaX = x - shakeX;
   var deltaY = y - shakeY;
@@ -1119,8 +1113,8 @@ function handleMotion(event) {
   if (delta > SHAKE_THRESHOLD) {
     shakeCounter++;
     if (shakeCounter > 2) {
-      var force = Math.min(delta / SHAKE_THRESHOLD, 30);
-      shakeCoins(force * 9);
+      var force = Math.min(delta / SHAKE_THRESHOLD, 25);
+      shakeCoins(force * 0.8);
       shakeCounter = 0;
     }
   } else {
@@ -1131,23 +1125,7 @@ function handleMotion(event) {
   var tiltX = x / 9.8;
   var tiltY = y / 9.8;
   
-  // === ПРОВЕРКА НА ПЕРЕВОРОТ (> 90°) ===
-  if (y < UPSIDE_DOWN_THRESHOLD) {
-    if (!isPhoneUpsideDown) {
-      isPhoneUpsideDown = true;
-      activateTopWall();
-    }
-  } else {
-    if (isPhoneUpsideDown) {
-      isPhoneUpsideDown = false;
-      deactivateTopWall();
-    }
-  }
-  
-  // Применяем наклон (только если не перевернут)
-  if (!isPhoneUpsideDown) {
-    applyTilt(tiltX, tiltY);
-  }
+  applyTilt(tiltX, tiltY);
 }
 
 /* ====== GAME FLOW ====== */
@@ -1206,8 +1184,8 @@ btnMuteE.addEventListener('touchend',function(e){e.preventDefault();e.stopPropag
 
 /* Shake button (only for desktop) */
 if (isDesktop) {
-  btnShakeE.addEventListener('click',function(e){e.stopPropagation();shakeCoins(2.5);});
-  btnShakeE.addEventListener('touchend',function(e){e.preventDefault();e.stopPropagation();shakeCoins(2.5);},{passive:false});
+  btnShakeE.addEventListener('click',function(e){e.stopPropagation();shakeCoins(3);});
+  btnShakeE.addEventListener('touchend',function(e){e.preventDefault();e.stopPropagation();shakeCoins(3);},{passive:false});
 }
 
 /* Top buttons */
