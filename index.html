@@ -155,7 +155,7 @@ var DC=500,GOG=120;
 var SHAKE_THRESHOLD = 3;       // Чувствительность (меньше = легче встряхнуть)
 var SHAKE_FORCE = 7;           // Сила толчка монет
 var SHAKE_COOLDOWN = 1000;     // Задержка между встряхиваниями (мс)
-var TILT_SENSITIVITY = 0.5;    // Чувствительность к наклонам (0.5 = быстрое перекатывание)
+var TILT_SENSITIVITY = 0.5;    // Чувствительность к наклонам
 var MAX_FILL_LEVEL = 0.85;     // Максимальное заполнение для работы гироскопа (85%)
 // =================================
 
@@ -436,6 +436,11 @@ function init(){
   mkW();
   mkPairOverrides();
   
+  // ===== СБРАСЫВАЕМ ГРАВИТАЦИЮ =====
+  eng.gravity.x = 0;
+  eng.gravity.y = 1.3;
+  // ================================
+  
   cur={id:1,x:GW/2};
   upU();
 }
@@ -666,7 +671,7 @@ function fixDrift(){
 /* ====== GAME LOGIC ====== */
 function rci(){
   if(firstDrop) return 1;
-  var wt=[0,30,25,20,15,10];  // Равные шансы (20% каждая)
+  var wt=[0,30,25,20,15,10];  // 30%, 25%, 20%, 15%, 10%
   var totalW=0;
   for(var id=1;id<=5;id++){
     if(id<=2 || unlocked[id]) totalW+=wt[id];
@@ -1037,7 +1042,14 @@ function applyTilt(accX, accY) {
   var forceX = accX * TILT_SENSITIVITY;
   var forceY = accY * TILT_SENSITIVITY;
   
-  // Убираем жесткое ограничение, добавляем хаотичность
+  // Уменьшаем гравитацию при наклоне (чтобы монеты "всплывали")
+  if (eng) {
+    var tiltStrength = Math.sqrt(forceX*forceX + forceY*forceY);
+    var gravityReduce = 1 - Math.min(tiltStrength * 2, 0.8);
+    eng.gravity.y = 1.3 * gravityReduce;
+    eng.gravity.x = forceX * 0.15;
+  }
+  
   for (var i = 0; i < coins.length; i++) {
     var coin = coins[i];
     var body = coin.body;
@@ -1046,25 +1058,28 @@ function applyTilt(accX, accY) {
       body.isSleeping = false;
     }
     
-    // Каждая монета получает свою силу (в зависимости от размера)
     var r = CN[coin.cid - 1].r;
     var sizeFactor = 1 + (r / 80);
     
     // Случайное отклонение для каждой монеты (хаотичность)
-    var randomX = (Math.random() - 0.5) * 0.05;
-    var randomY = (Math.random() - 0.5) * 0.05;
+    var randomX = (Math.random() - 0.5) * 0.08;
+    var randomY = (Math.random() - 0.5) * 0.08;
     
     // Сила с учётом размера и случайности
-    var finalX = forceX * (0.7 + Math.random() * 0.6) / sizeFactor + randomX;
-    var finalY = forceY * (0.7 + Math.random() * 0.6) / sizeFactor + randomY;
+    var finalX = forceX * (0.5 + Math.random() * 0.8) / sizeFactor + randomX;
+    var finalY = forceY * (0.5 + Math.random() * 0.8) / sizeFactor + randomY;
     
-    // Плавное ускорение (инерция)
-    var inertiaX = body.velocity.x * 0.02;
-    var inertiaY = body.velocity.y * 0.02;
+    // Добавляем вертикальный импульс (чтобы монеты подпрыгивали)
+    var verticalBoost = Math.abs(forceY) * 0.3 + Math.abs(forceX) * 0.1;
+    finalY -= verticalBoost * (0.5 + Math.random() * 0.5);
+    
+    // Инерция
+    var inertiaX = body.velocity.x * 0.03;
+    var inertiaY = body.velocity.y * 0.03;
     
     Matter.Body.setVelocity(body, {
-      x: body.velocity.x + finalX * 0.4 + inertiaX,
-      y: body.velocity.y + finalY * 0.4 + inertiaY
+      x: body.velocity.x + finalX * 0.5 + inertiaX,
+      y: body.velocity.y + finalY * 0.5 + inertiaY - 0.2
     });
   }
 }
