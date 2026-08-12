@@ -1114,8 +1114,8 @@ function handleMotion(event) {
   if (delta > SHAKE_THRESHOLD) {
     shakeCounter++;
     if (shakeCounter > 2) {
-      var force = Math.min(delta / SHAKE_THRESHOLD, 25);
-      shakeCoins(force * 0.8);
+      var force = Math.min(delta / SHAKE_THRESHOLD, 30);
+      shakeCoins(force * 4);
       shakeCounter = 0;
     }
   } else {
