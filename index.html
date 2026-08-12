@@ -428,7 +428,7 @@ function genTop(){
 
 /* ====== PHYSICS SETUP ====== */
 function init(){
-  eng=Matter.Engine.create({gravity:{x:0,y:1.3,scale:0.001}});
+  eng=Matter.Engine.create({gravity:{x:0,y:0.8,scale:0.001}});
   eng.positionIterations=20;
   eng.velocityIterations=20;
   coins=[];me=[];sp=[];pm=[];sc=0;go=false;cd=true;dt=0;cb2=0;lmt=0;lt2=0;ac=0;floorTouch={};unlocked={};firstDrop=true;
@@ -588,7 +588,7 @@ function applyPairOverrides(pairs){
       if(other.label==='floor'){
         pair.friction=0;
         pair.frictionStatic=0.75;
-        pair.restitution=0.3;
+        pair.restitution=0.1;
         floorTouch[coin.id]=true;
       } else {
         pair.friction=0.25;
@@ -727,7 +727,7 @@ function pmrg(ca,cb3){
   }
   var cc=CN[nid-1];
   var nb=Matter.Bodies.circle(mx,my,cc.r,{
-    friction:0.3, restitution:0.2, frictionStatic:0.4, frictionAir:0.003,
+    friction:0.3, restitution:0.1, frictionStatic:0.4, frictionAir:0.003,
     density:0.002, label:'c'
   });
   Matter.Body.setVelocity(nb,{x:0,y:-1.5});
@@ -753,7 +753,7 @@ function drop(){
   if(!cur||!cd||go)return;
   var cc=CN[cur.id-1];
   var bd=Matter.Bodies.circle(cur.x,DY,cc.r,{
-    friction:0.3, restitution:0.2, frictionStatic:0.4, frictionAir:0.003,
+    friction:0.3, restitution:0.1, frictionStatic:0.4, frictionAir:0.003,
     density:0.002, label:'c'
   });
   Matter.Body.setVelocity(bd,{x:0,y:0});
