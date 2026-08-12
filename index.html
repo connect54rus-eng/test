@@ -329,7 +329,6 @@ var firstDrop=true;
 bs=parseInt(localStorage.getItem('suika-best')||'0');bsE.textContent=bs;
 
 // ===== ПЕРЕМЕННЫЕ ДЛЯ ГИРОСКОПА =====
-var topWall = null;
 var shakeCounter = 0;
 var shakeX = 0, shakeY = 0, shakeZ = 0;
 var lastShakeTime = 0;
@@ -433,14 +432,9 @@ function init(){
   eng.positionIterations=20;
   eng.velocityIterations=20;
   coins=[];me=[];sp=[];pm=[];sc=0;go=false;cd=true;dt=0;cb2=0;lmt=0;lt2=0;ac=0;floorTouch={};unlocked={};firstDrop=true;
-  topWall = null;
 
   mkW();
   mkPairOverrides();
-  
-  // ===== СОЗДАЁМ БАРЬЕР (если гироскоп активен) =====
-  updateTopWall();
-  // ================================================
   
   cur={id:1,x:GW/2};
   upU();
@@ -928,8 +922,9 @@ function upd(){
   if(cd&&!cur&&!go){cur={id:rci(),x:GW/2};upU();}
   upE();
   
-  // Обновляем барьер в зависимости от заполнения
-  updateTopWall();
+  // ===== ОДНОСТОРОННИЙ БАРЬЕР =====
+  checkTopBarrier();
+  // ================================
 }
 
 function loop(ts){
@@ -953,33 +948,39 @@ function getFillLevel() {
   return fillPercent;
 }
 
-function createTopWall() {
-  if (topWall) return;
-  
-  topWall = Matter.Bodies.rectangle(GW/2, DLY - 2, GW + 20, 4, {
-    isStatic: true,
-    friction: 0.3,
-    restitution: 0.05,
-    label: 'topWall',
-    render: { visible: false }
-  });
-  Matter.Composite.add(eng.world, topWall);
-}
-
-function updateTopWall() {
+function checkTopBarrier() {
   var fillLevel = getFillLevel();
   var gyroEnabled = fillLevel < MAX_FILL_LEVEL;
   
-  if (gyroEnabled) {
-    // Гироскоп активен — включаем барьер
-    if (!topWall) {
-      createTopWall();
-    }
-  } else {
-    // Гироскоп отключён — убираем барьер
-    if (topWall) {
-      Matter.Composite.remove(eng.world, topWall);
-      topWall = null;
+  // Если гироскоп отключён — барьер не нужен
+  if (!gyroEnabled) return;
+  
+  for (var i = 0; i < coins.length; i++) {
+    var coin = coins[i];
+    var body = coin.body;
+    var r = CN[coin.cid - 1].r;
+    
+    // Если монета выше линии
+    if (body.position.y - r < DLY) {
+      // Проверяем: она летит вверх или вниз?
+      var vy = body.velocity.y;
+      
+      if (vy < 0) {
+        // Летит ВВЕРХ — выталкиваем обратно вниз
+        Matter.Body.setVelocity(body, {
+          x: body.velocity.x * 0.5,
+          y: Math.abs(vy) * 0.3 + 0.5
+        });
+        
+        // Если слишком высоко — телепортируем обратно
+        if (body.position.y - r < DLY - 30) {
+          Matter.Body.setPosition(body, {
+            x: body.position.x,
+            y: DLY + r + 5
+          });
+        }
+      }
+      // Если летит ВНИЗ (vy > 0) — пропускаем свободно
     }
   }
 }
